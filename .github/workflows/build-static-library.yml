@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           chmod +x ${{ matrix.script }}
-          ${{ matrix.script }}
+          bash ${{ matrix.script }}
 
       - name: Package Library Files
         shell: bash
