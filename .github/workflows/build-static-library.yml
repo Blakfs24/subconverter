@@ -69,11 +69,11 @@ jobs:
           cp -r src/*.h* dist/include/
           # Copy static library (adjust paths based on your build output)
           if [ "${{ matrix.name }}" = "Windows" ]; then
-            cp build/libsubconverter.a dist/lib/
+            cp libsubconverter.a dist/lib/
           elif [ "${{ matrix.name }}" = "macOS" ]; then
-            cp build/libsubconverter.a dist/lib/
+            cp libsubconverter.a dist/lib/
           else
-            cp build/libsubconverter.a dist/lib/
+            cp libsubconverter.a dist/lib/
           fi
           tar czf ${{ matrix.artifact }}.tar.gz dist/
 

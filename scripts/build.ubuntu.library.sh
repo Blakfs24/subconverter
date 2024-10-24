@@ -57,6 +57,5 @@ cd ..
 
 # 构建 subconverter 静态库
 export PKG_CONFIG_PATH=/usr/lib64/pkgconfig
-cd ..
 cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_STATIC_LIBRARY=ON .
 make -j$(nproc)
