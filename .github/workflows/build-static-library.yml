@@ -45,6 +45,10 @@ jobs:
           update: true
           install: git base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-nghttp2 mingw-w64-x86_64-openssl
 
+      - name: Add MSYS2 to PATH
+        if: matrix.name == 'Windows'
+        run: echo "C:\\msys64\\usr\\bin" >> $GITHUB_PATH
+
       - name: Setup macOS
         if: matrix.name == 'macOS'
         run: |
