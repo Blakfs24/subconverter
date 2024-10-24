@@ -56,7 +56,11 @@ jobs:
         shell: bash
         run: |
           chmod +x ${{ matrix.script }}
-          sudo bash ${{ matrix.script }}
+          if [ "${{ matrix.name }}" = "macOS" ]; then
+            sudo bash ${{ matrix.script }}
+          else
+            bash ${{ matrix.script }}
+          fi
 
       - name: Package Library Files
         shell: bash
