@@ -35,10 +35,9 @@ jobs:
     container: ${{ matrix.container }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: 'recursive'
 
       - name: Setup MSYS2 (Windows)
         if: matrix.name == 'Windows'
