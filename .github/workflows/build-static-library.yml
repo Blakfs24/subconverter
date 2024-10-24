@@ -19,13 +19,11 @@ jobs:
             script: scripts/build.windows.library.sh
             artifact: subconverter-windows-static-lib
             shell: msys2 {0}
-
           - name: macOS
             os: macos-latest
             script: scripts/build.macos.library.sh
             artifact: subconverter-macos-static-lib
             shell: bash
-
           - name: Ubuntu
             os: ubuntu-latest
             script: scripts/build.ubuntu.library.sh
@@ -47,11 +45,11 @@ jobs:
           msystem: MINGW64
           update: true
           install: git base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-nghttp2 mingw-w64-x86_64-openssl
-          path-type: inherit
 
-      - name: Add MSYS2 to PATH
-        if: matrix.name == 'Windows'
-        run: echo "C:\\msys64\\usr\\bin" >> $GITHUB_PATH
+      # Remove this step as it's no longer needed
+      # - name: Add MSYS2 to PATH
+      #   if: matrix.name == 'Windows'
+      #   run: echo "C:\\msys64\\usr\\bin" >> $GITHUB_PATH
 
       - name: Setup macOS
         if: matrix.name == 'macOS'
@@ -60,7 +58,7 @@ jobs:
           brew install cmake rapidjson zlib pcre2 pkgconfig
 
       - name: Build Static Library
-        shell: bash
+        shell: ${{ matrix.shell }}
         run: |
           chmod +x ${{ matrix.script }}
           if [ "${{ matrix.name }}" = "Ubuntu" ]; then
