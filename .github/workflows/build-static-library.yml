@@ -18,17 +18,19 @@ jobs:
             os: windows-latest
             script: scripts/build.windows.library.sh
             artifact: subconverter-windows-static-lib
-            msystem: MINGW64
-            
+            shell: msys2 {0}
+
           - name: macOS
             os: macos-latest
             script: scripts/build.macos.library.sh
             artifact: subconverter-macos-static-lib
-            
+            shell: bash
+
           - name: Ubuntu
             os: ubuntu-latest
             script: scripts/build.ubuntu.library.sh
             artifact: subconverter-ubuntu-static-lib
+            shell: bash
 
     name: Build on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
