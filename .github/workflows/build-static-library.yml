@@ -31,7 +31,6 @@ jobs:
 
     name: Build on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
 
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +55,7 @@ jobs:
         shell: bash
         run: |
           chmod +x ${{ matrix.script }}
-          if [ "${{ matrix.name }}" = "macOS" ]; then
+          if [ "${{ matrix.name }}" = "Ubuntu" ]; then
             sudo bash ${{ matrix.script }}
           else
             bash ${{ matrix.script }}
