@@ -24,11 +24,10 @@ jobs:
             script: scripts/build.macos.library.sh
             artifact: subconverter-macos-static-lib
             
-          - name: Alpine
+          - name: Ubuntu
             os: ubuntu-latest
-            container: alpine:latest
-            script: scripts/build.alpine.library.sh
-            artifact: subconverter-alpine-static-lib
+            script: scripts/build.ubuntu.library.sh
+            artifact: subconverter-ubuntu-static-lib
 
     name: Build on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -97,6 +96,6 @@ jobs:
           files: |
             subconverter-windows-static-lib.tar.gz
             subconverter-macos-static-lib.tar.gz
-            subconverter-alpine-static-lib.tar.gz
+            subconverter-ubuntu-static-lib.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
