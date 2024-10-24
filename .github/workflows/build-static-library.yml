@@ -18,6 +18,7 @@ jobs:
             os: windows-latest
             script: scripts/build.windows.library.sh
             artifact: subconverter-windows-static-lib
+            msystem: MINGW64
             
           - name: macOS
             os: macos-latest
@@ -44,6 +45,7 @@ jobs:
           msystem: MINGW64
           update: true
           install: git base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-nghttp2 mingw-w64-x86_64-openssl
+          path-type: inherit
 
       - name: Add MSYS2 to PATH
         if: matrix.name == 'Windows'
