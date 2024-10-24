@@ -57,15 +57,33 @@ jobs:
           brew update
           brew install cmake rapidjson zlib pcre2 pkgconfig
 
-      - name: Build Static Library
-        shell: ${{ matrix.shell }}
+      # - name: Build Static Library
+      #   shell: ${{ matrix.shell }}
+      #   run: |
+      #     chmod +x ${{ matrix.script }}
+      #     if [ "${{ matrix.name }}" = "Ubuntu" ]; then
+      #       sudo bash ${{ matrix.script }}
+      #     else
+      #       bash ${{ matrix.script }}
+      #     fi
+      
+      - name: Build Static Library(windows)
+        if: matrix.name == 'Windows'
+        shell: msys2 {0}
         run: |
-          chmod +x ${{ matrix.script }}
-          if [ "${{ matrix.name }}" = "Ubuntu" ]; then
-            sudo bash ${{ matrix.script }}
-          else
-            bash ${{ matrix.script }}
-          fi
+          bash ${{ matrix.script }}
+
+      - name: Build Static Library(macOS)
+        if: matrix.name == 'macOS'
+        shell: bash
+        run: |
+          bash ${{ matrix.script }}
+      
+      - name: Build Static Library(Ubuntu)
+        if: matrix.name == 'Ubuntu'
+        shell: bash
+        run: |
+          sudo bash ${{ matrix.script }}
 
       - name: Package Library Files
         shell: bash
