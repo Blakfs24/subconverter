@@ -2787,16 +2787,16 @@ std::string nodeToSingbox(Proxy node) {
                 }
                 break;
             }
-//            case ProxyType::ShadowsocksR: {
-//                addSingBoxCommonMembers(proxy, x, "shadowsocksr", allocator);
-//                proxy.AddMember("method", rapidjson::StringRef(x.EncryptMethod.c_str()), allocator);
-//                proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
-//                proxy.AddMember("protocol", rapidjson::StringRef(x.Protocol.c_str()), allocator);
-//                proxy.AddMember("protocol_param", rapidjson::StringRef(x.ProtocolParam.c_str()), allocator);
-//                proxy.AddMember("obfs", rapidjson::StringRef(x.OBFS.c_str()), allocator);
-//                proxy.AddMember("obfs_param", rapidjson::StringRef(x.OBFSParam.c_str()), allocator);
-//                break;
-//            }
+           case ProxyType::ShadowsocksR: {
+               addSingBoxCommonMembers(proxy, x, "shadowsocksr", allocator);
+               proxy.AddMember("method", rapidjson::StringRef(x.EncryptMethod.c_str()), allocator);
+               proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+               proxy.AddMember("protocol", rapidjson::StringRef(x.Protocol.c_str()), allocator);
+               proxy.AddMember("protocol_param", rapidjson::StringRef(x.ProtocolParam.c_str()), allocator);
+               proxy.AddMember("obfs", rapidjson::StringRef(x.OBFS.c_str()), allocator);
+               proxy.AddMember("obfs_param", rapidjson::StringRef(x.OBFSParam.c_str()), allocator);
+               break;
+           }
             case ProxyType::VMess: {
                 addSingBoxCommonMembers(proxy, x, "vmess", allocator);
                 proxy.AddMember("uuid", rapidjson::StringRef(x.UserId.c_str()), allocator);
@@ -2870,18 +2870,54 @@ std::string nodeToSingbox(Proxy node) {
                     proxy.AddMember("transport", transport, allocator);
                 break;
             }
+//             case ProxyType::WireGuard: {
+//                 proxy.AddMember("type", "wireguard", allocator);
+//                 proxy.AddMember("tag", rapidjson::StringRef(x.Remark.c_str()), allocator);
+//                 proxy.AddMember("inet4_bind_address", rapidjson::StringRef(x.SelfIP.c_str()), allocator);
+//                 rapidjson::Value addresses(rapidjson::kArrayType);
+//                 addresses.PushBack(rapidjson::StringRef(x.SelfIP.append("/32").c_str()), allocator);
+// //                if (!x.SelfIPv6.empty())
+// //                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+//                 proxy.AddMember("local_address", addresses, allocator);
+//                 if (!x.SelfIPv6.empty())
+//                     proxy.AddMember("inet6_bind_address", rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+//                 proxy.AddMember("private_key", rapidjson::StringRef(x.PrivateKey.c_str()), allocator);
+//                 rapidjson::Value peer(rapidjson::kObjectType);
+//                 peer.AddMember("server", rapidjson::StringRef(x.Hostname.c_str()), allocator);
+//                 peer.AddMember("server_port", x.Port, allocator);
+//                 peer.AddMember("public_key", rapidjson::StringRef(x.PublicKey.c_str()), allocator);
+//                 if (!x.PreSharedKey.empty())
+//                     peer.AddMember("pre_shared_key", rapidjson::StringRef(x.PreSharedKey.c_str()), allocator);
+
+//                 if (!x.AllowedIPs.empty()) {
+//                     auto allowed_ips = stringArrayToJsonArray(x.AllowedIPs, ",", allocator);
+//                     peer.AddMember("allowed_ips", allowed_ips, allocator);
+//                 }
+
+//                 if (!x.ClientId.empty()) {
+//                     auto reserved = stringArrayToJsonArray(x.ClientId, ",", allocator);
+//                     peer.AddMember("reserved", reserved, allocator);
+//                 }
+//                 if (!x.Password.empty()) {
+//                     proxy.AddMember("pre_shared_key", rapidjson::StringRef(x.Password.c_str()), allocator);
+//                 }
+//                 rapidjson::Value peers(rapidjson::kArrayType);
+//                 peers.PushBack(peer, allocator);
+//                 proxy.AddMember("peers", peers, allocator);
+//                 proxy.AddMember("mtu", x.Mtu, allocator);
+//                 break;
+//             }
             case ProxyType::WireGuard: {
                 proxy.AddMember("type", "wireguard", allocator);
                 proxy.AddMember("tag", rapidjson::StringRef(x.Remark.c_str()), allocator);
-                proxy.AddMember("inet4_bind_address", rapidjson::StringRef(x.SelfIP.c_str()), allocator);
                 rapidjson::Value addresses(rapidjson::kArrayType);
-                addresses.PushBack(rapidjson::StringRef(x.SelfIP.append("/32").c_str()), allocator);
-//                if (!x.SelfIPv6.empty())
-//                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
-                proxy.AddMember("local_address", addresses, allocator);
+                std::cout << "Tag: " << x.Remark.c_str() << ", ipv4: " << x.SelfIP.c_str() << std::endl;
+                addresses.PushBack(rapidjson::StringRef(x.SelfIP.c_str()), allocator);
                 if (!x.SelfIPv6.empty())
-                    proxy.AddMember("inet6_bind_address", rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+                proxy.AddMember("local_address", addresses, allocator);
                 proxy.AddMember("private_key", rapidjson::StringRef(x.PrivateKey.c_str()), allocator);
+
                 rapidjson::Value peer(rapidjson::kObjectType);
                 peer.AddMember("server", rapidjson::StringRef(x.Hostname.c_str()), allocator);
                 peer.AddMember("server_port", x.Port, allocator);
@@ -2898,9 +2934,7 @@ std::string nodeToSingbox(Proxy node) {
                     auto reserved = stringArrayToJsonArray(x.ClientId, ",", allocator);
                     peer.AddMember("reserved", reserved, allocator);
                 }
-                if (!x.Password.empty()) {
-                    proxy.AddMember("pre_shared_key", rapidjson::StringRef(x.Password.c_str()), allocator);
-                }
+
                 rapidjson::Value peers(rapidjson::kArrayType);
                 peers.PushBack(peer, allocator);
                 proxy.AddMember("peers", peers, allocator);
@@ -3139,16 +3173,16 @@ std::string nodeToSingbox(std::vector<Proxy> nodes) {
                 }
                 break;
             }
-//            case ProxyType::ShadowsocksR: {
-//                addSingBoxCommonMembers(proxy, x, "shadowsocksr", allocator);
-//                proxy.AddMember("method", rapidjson::StringRef(x.EncryptMethod.c_str()), allocator);
-//                proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
-//                proxy.AddMember("protocol", rapidjson::StringRef(x.Protocol.c_str()), allocator);
-//                proxy.AddMember("protocol_param", rapidjson::StringRef(x.ProtocolParam.c_str()), allocator);
-//                proxy.AddMember("obfs", rapidjson::StringRef(x.OBFS.c_str()), allocator);
-//                proxy.AddMember("obfs_param", rapidjson::StringRef(x.OBFSParam.c_str()), allocator);
-//                break;
-//            }
+           case ProxyType::ShadowsocksR: {
+               addSingBoxCommonMembers(proxy, x, "shadowsocksr", allocator);
+               proxy.AddMember("method", rapidjson::StringRef(x.EncryptMethod.c_str()), allocator);
+               proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+               proxy.AddMember("protocol", rapidjson::StringRef(x.Protocol.c_str()), allocator);
+               proxy.AddMember("protocol_param", rapidjson::StringRef(x.ProtocolParam.c_str()), allocator);
+               proxy.AddMember("obfs", rapidjson::StringRef(x.OBFS.c_str()), allocator);
+               proxy.AddMember("obfs_param", rapidjson::StringRef(x.OBFSParam.c_str()), allocator);
+               break;
+           }
             case ProxyType::VMess: {
                 addSingBoxCommonMembers(proxy, x, "vmess", allocator);
                 proxy.AddMember("uuid", rapidjson::StringRef(x.UserId.c_str()), allocator);
@@ -3222,18 +3256,54 @@ std::string nodeToSingbox(std::vector<Proxy> nodes) {
                     proxy.AddMember("transport", transport, allocator);
                 break;
             }
+//             case ProxyType::WireGuard: {
+//                 proxy.AddMember("type", "wireguard", allocator);
+//                 proxy.AddMember("tag", rapidjson::StringRef(x.Remark.c_str()), allocator);
+//                 proxy.AddMember("inet4_bind_address", rapidjson::StringRef(x.SelfIP.c_str()), allocator);
+//                 rapidjson::Value addresses(rapidjson::kArrayType);
+//                 addresses.PushBack(rapidjson::StringRef(x.SelfIP.append("/32").c_str()), allocator);
+// //                if (!x.SelfIPv6.empty())
+// //                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+//                 proxy.AddMember("local_address", addresses, allocator);
+//                 if (!x.SelfIPv6.empty())
+//                     proxy.AddMember("inet6_bind_address", rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+//                 proxy.AddMember("private_key", rapidjson::StringRef(x.PrivateKey.c_str()), allocator);
+//                 rapidjson::Value peer(rapidjson::kObjectType);
+//                 peer.AddMember("server", rapidjson::StringRef(x.Hostname.c_str()), allocator);
+//                 peer.AddMember("server_port", x.Port, allocator);
+//                 peer.AddMember("public_key", rapidjson::StringRef(x.PublicKey.c_str()), allocator);
+//                 if (!x.PreSharedKey.empty())
+//                     peer.AddMember("pre_shared_key", rapidjson::StringRef(x.PreSharedKey.c_str()), allocator);
+
+//                 if (!x.AllowedIPs.empty()) {
+//                     auto allowed_ips = stringArrayToJsonArray(x.AllowedIPs, ",", allocator);
+//                     peer.AddMember("allowed_ips", allowed_ips, allocator);
+//                 }
+
+//                 if (!x.ClientId.empty()) {
+//                     auto reserved = stringArrayToJsonArray(x.ClientId, ",", allocator);
+//                     peer.AddMember("reserved", reserved, allocator);
+//                 }
+//                 if (!x.Password.empty()) {
+//                     proxy.AddMember("pre_shared_key", rapidjson::StringRef(x.Password.c_str()), allocator);
+//                 }
+//                 rapidjson::Value peers(rapidjson::kArrayType);
+//                 peers.PushBack(peer, allocator);
+//                 proxy.AddMember("peers", peers, allocator);
+//                 proxy.AddMember("mtu", x.Mtu, allocator);
+//                 break;
+//             }
             case ProxyType::WireGuard: {
                 proxy.AddMember("type", "wireguard", allocator);
                 proxy.AddMember("tag", rapidjson::StringRef(x.Remark.c_str()), allocator);
-                proxy.AddMember("inet4_bind_address", rapidjson::StringRef(x.SelfIP.c_str()), allocator);
                 rapidjson::Value addresses(rapidjson::kArrayType);
-                addresses.PushBack(rapidjson::StringRef(x.SelfIP.append("/32").c_str()), allocator);
-//                if (!x.SelfIPv6.empty())
-//                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
-                proxy.AddMember("local_address", addresses, allocator);
+                std::cout << "Tag: " << x.Remark.c_str() << ", ipv4: " << x.SelfIP.c_str() << std::endl;
+                addresses.PushBack(rapidjson::StringRef(x.SelfIP.c_str()), allocator);
                 if (!x.SelfIPv6.empty())
-                    proxy.AddMember("inet6_bind_address", rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+                    addresses.PushBack(rapidjson::StringRef(x.SelfIPv6.c_str()), allocator);
+                proxy.AddMember("local_address", addresses, allocator);
                 proxy.AddMember("private_key", rapidjson::StringRef(x.PrivateKey.c_str()), allocator);
+
                 rapidjson::Value peer(rapidjson::kObjectType);
                 peer.AddMember("server", rapidjson::StringRef(x.Hostname.c_str()), allocator);
                 peer.AddMember("server_port", x.Port, allocator);
@@ -3250,9 +3320,7 @@ std::string nodeToSingbox(std::vector<Proxy> nodes) {
                     auto reserved = stringArrayToJsonArray(x.ClientId, ",", allocator);
                     peer.AddMember("reserved", reserved, allocator);
                 }
-                if (!x.Password.empty()) {
-                    proxy.AddMember("pre_shared_key", rapidjson::StringRef(x.Password.c_str()), allocator);
-                }
+
                 rapidjson::Value peers(rapidjson::kArrayType);
                 peers.PushBack(peer, allocator);
                 proxy.AddMember("peers", peers, allocator);

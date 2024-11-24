@@ -3,11 +3,13 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"unsafe"
 )
 
 /*
-#cgo LDFLAGS: -L./ -lsubconverter -static -lpcre2-8 -lyaml-cpp -lstdc++
+#cgo LDFLAGS: -L../  -lsubconverter -static -lpcre2-8 -lyaml-cpp -lstdc++ -lm
 #include <stdlib.h>
 
 // 声明外部 C 函数
@@ -43,8 +45,19 @@ func main() {
 	fmt.Println(out)
 
 	// goInput := "{\"type\":\"vmess\",\"tag\":\"SCP2\",\"server\":\"www.smcacre.gov\",\"server_port\":443,\"uuid\":\"3cc8e2d2-e4a4-4d87-c16c-a8fc70296a7b\",\"alter_id\":0,\"security\":\"auto\",\"transport\":{\"type\":\"ws\",\"path\":\"/3cc8e2d2\",\"headers\":{\"Host\":\"lajihuawei.com\"}},\"tls\":{\"enabled\":true,\"server_name\":\"www.smcacre.gov\",\"insecure\":false}}"
-	goInput = "aHlzdGVyaWEyOi8vc2hhcmVjZW50cmVwcm9AZGUuc2hhcmVjZW50cmVwcm8ubGluazo0NDMzP3BlZXI9ZGUuc2hhcmVjZW50cmVwcm8ubGluayZvYmZzPW5vbmUmZG93bm1icHM9MTAwMCNTQ1AxCnZtZXNzOi8vZXcwS0lDQWlkaUk2SUNJeUlpd05DaUFnSW5Ceklqb2dJbE5EVURJaUxBMEtJQ0FpWVdSa0lqb2dJbmQzZHk1emJXTmhZM0psTG1kdmRpSXNEUW9nSUNKd2IzSjBJam9nSWpRME15SXNEUW9nSUNKcFpDSTZJQ0l6WTJNNFpUSmtNaTFsTkdFMExUUmtPRGN0WXpFMll5MWhPR1pqTnpBeU9UWmhOMklpTEEwS0lDQWlZV2xrSWpvZ0lqQWlMQTBLSUNBaWMyTjVJam9nSW1GMWRHOGlMQTBLSUNBaWJtVjBJam9nSW5keklpd05DaUFnSW5SNWNHVWlPaUFpYm05dVpTSXNEUW9nSUNKb2IzTjBJam9nSW14aGFtbG9kV0YzWldrdVkyOXRJaXdOQ2lBZ0luQmhkR2dpT2lBaUx6TmpZemhsTW1ReUlpd05DaUFnSW5Sc2N5STZJQ0owYkhNaUxBMEtJQ0FpYzI1cElqb2dJbmQzZHk1emJXTmhZM0psTG1kdmRpSXNEUW9nSUNKaGJIQnVJam9nSWlJTkNuMD0"
-	// fmt.Println(goInput)
+	path := "/workspaces/singtools_private/config.yaml"
+	// os.ReadFile(path)
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+	goInput = string(data)
+	fmt.Println(goInput[:100])
 	out = NodeToSingbox(goInput, "multi")
 	fmt.Println(out)
 }

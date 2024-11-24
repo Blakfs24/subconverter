@@ -15,11 +15,11 @@ sudo apt install gcc g++ build-essential cmake make autoconf automake libtool py
 sudo apt install libmbedtls-dev zlib1g-dev rapidjson-dev libpcre2-dev -y
 
 # 构建并安装静态版本的 curl
-git clone https://github.com/curl/curl --depth=1 --branch curl-8_4_0
-cd curl
-cmake -DCURL_USE_MBEDTLS=ON -DHTTP_ONLY=ON -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_USE_LIBSSH2=OFF -DBUILD_CURL_EXE=OFF .
-make install -j$(nproc)
-cd ..
+# git clone https://github.com/curl/curl --depth=1 --branch curl-8_4_0
+# cd curl
+# cmake -DCURL_USE_MBEDTLS=ON -DHTTP_ONLY=ON -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_USE_LIBSSH2=OFF -DBUILD_CURL_EXE=OFF .
+# make install -j$(nproc)
+# cd ..
 
 # 构建并安装静态版本的 yaml-cpp
 git clone https://github.com/jbeder/yaml-cpp --depth=1
@@ -29,24 +29,24 @@ make install -j$(nproc)
 cd ..
 
 # 构建并安装静态版本的 quickjspp
-git clone https://github.com/ftk/quickjspp --depth=1
-cd quickjspp
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF .
-make quickjs -j$(nproc)
-install -d /usr/lib/quickjs/
-install -m644 quickjs/libquickjs.a /usr/lib/quickjs/
-install -d /usr/include/quickjs/
-install -m644 quickjs/quickjs.h quickjs/quickjs-libc.h /usr/include/quickjs/
-install -m644 quickjspp.hpp /usr/include/
-cd ..
+# git clone https://github.com/ftk/quickjspp --depth=1
+# cd quickjspp
+# cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF .
+# make quickjs -j$(nproc)
+# install -d /usr/lib/quickjs/
+# install -m644 quickjs/libquickjs.a /usr/lib/quickjs/
+# install -d /usr/include/quickjs/
+# install -m644 quickjs/quickjs.h quickjs/quickjs-libc.h /usr/include/quickjs/
+# install -m644 quickjspp.hpp /usr/include/
+# cd ..
 
 # 构建并安装静态版本的 libcron
-git clone https://github.com/PerMalmberg/libcron --depth=1
-cd libcron
-git submodule update --init
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF .
-make libcron install -j$(nproc)
-cd ..
+# git clone https://github.com/PerMalmberg/libcron --depth=1
+# cd libcron
+# git submodule update --init
+# cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF .
+# make libcron install -j$(nproc)
+# cd ..
 
 # 构建并安装静态版本的 toml11
 git clone https://github.com/ToruNiina/toml11 --branch="v3.7.1" --depth=1
