@@ -210,10 +210,10 @@ IF(BUILD_RELEASE_APP)
             BUILD_COMMAND ${MAKE_EXECUTABLE} -C <SOURCE_DIR> libquickjs.a
             BUILD_IN_SOURCE TRUE
             INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory ${QUICKJS_INSTALL_DIR}/lib
-                    COMMAND ${CMAKE_COMMAND} -E make_directory ${QUICKJS_INSTALL_DIR}/include
+                    COMMAND ${CMAKE_COMMAND} -E make_directory ${QUICKJS_INSTALL_DIR}/include/quickjs
                     COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/libquickjs.a ${QUICKJS_INSTALL_DIR}/lib/
-                    COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/quickjs.h ${QUICKJS_INSTALL_DIR}/include/
-                    COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/quickjs-libc.h ${QUICKJS_INSTALL_DIR}/include/
+                    COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/quickjs.h ${QUICKJS_INSTALL_DIR}/include/quickjs/
+                    COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/quickjs-libc.h ${QUICKJS_INSTALL_DIR}/include/quickjs/
             BUILD_BYPRODUCTS ${QUICKJS_INSTALL_DIR}/lib/libquickjs.a
             LOG_DOWNLOAD TRUE
             LOG_BUILD TRUE
@@ -273,9 +273,9 @@ IF(BUILD_RELEASE_APP)
 ENDIF()
 
 # ------------------------------------------------------------
-# CURL (for BUILD_RELEASE_APP)
+# CURL (for BUILD_RELEASE_APP and BUILD_STATIC_LIBRARY)
 # ------------------------------------------------------------
-IF(BUILD_RELEASE_APP)
+IF(BUILD_RELEASE_APP OR BUILD_STATIC_LIBRARY)
     IF(NOT FORCE_FETCH_DEPS)
         FIND_PACKAGE(CURL 7.54.0 QUIET)
     ENDIF()
@@ -299,11 +299,36 @@ IF(BUILD_RELEASE_APP)
         SET(BUILD_TESTING OFF CACHE INTERNAL "")
         SET(CURL_USE_OPENSSL OFF CACHE INTERNAL "")
         SET(CURL_USE_LIBSSH2 OFF CACHE INTERNAL "")
+        SET(CURL_DISABLE_INSTALL OFF CACHE INTERNAL "")
+        SET(CURL_DISABLE_HEADERS OFF CACHE INTERNAL "")
 
         FetchContent_MakeAvailable(curl)
+
+        # Set variables for consistent usage
+        SET(CURL_INCLUDE_DIRS ${curl_SOURCE_DIR}/include)
+        IF(TARGET libcurl_static)
+            SET(CURL_LIBRARY libcurl_static)
+            SET(CURL_LIBRARIES libcurl_static)
+        ELSEIF(TARGET curl_static)
+            SET(CURL_LIBRARY curl_static)
+            SET(CURL_LIBRARIES curl_static)
+        ELSEIF(TARGET libcurl)
+            SET(CURL_LIBRARY libcurl)
+            SET(CURL_LIBRARIES libcurl)
+        ELSE()
+            SET(CURL_LIBRARY libcurl)
+            SET(CURL_LIBRARIES libcurl)
+        ENDIF()
+
         MESSAGE(STATUS "✅ CURL fetched and configured successfully")
+        MESSAGE(STATUS "   Include dirs: ${CURL_INCLUDE_DIRS}")
+        MESSAGE(STATUS "   Library: ${CURL_LIBRARY}")
     ELSE()
         MESSAGE(STATUS "✅ Using system CURL")
+        IF(CURL_FOUND AND NOT BUILD_STATIC_LIBRARY)
+            SET(CURL_INCLUDE_DIRS ${CURL_INCLUDE_DIR})
+            SET(CURL_LIBRARIES CURL::libcurl)
+        ENDIF()
     ENDIF()
 ENDIF()
 
@@ -358,6 +383,11 @@ IF(CURL_FOUND OR TARGET CURL::libcurl)
     TARGET_LINK_DIRECTORIES(${RELEASE_TARGET_NAME} PRIVATE ${CURL_LIBRARY_DIRS})
     TARGET_INCLUDE_DIRECTORIES(${RELEASE_TARGET_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
     TARGET_LINK_LIBRARIES(${RELEASE_TARGET_NAME} CURL::libcurl)
+    TARGET_COMPILE_DEFINITIONS(${RELEASE_TARGET_NAME} PRIVATE -DCURL_STATICLIB)
+ELSEIF(CURL_LIBRARIES)
+    # Use fetched CURL
+    TARGET_INCLUDE_DIRECTORIES(${RELEASE_TARGET_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
+    TARGET_LINK_LIBRARIES(${RELEASE_TARGET_NAME} ${CURL_LIBRARIES})
     TARGET_COMPILE_DEFINITIONS(${RELEASE_TARGET_NAME} PRIVATE -DCURL_STATICLIB)
 ELSE()
     MESSAGE(WARNING "CURL not found - some features may not work")
@@ -445,6 +475,13 @@ TARGET_COMPILE_DEFINITIONS(${STATIC_TARGET_NAME} PRIVATE -DYAML_CPP_STATIC_DEFIN
 # PCRE2 - Already handled by FetchContent above
 TARGET_LINK_LIBRARIES(${STATIC_TARGET_NAME} PRIVATE ${PCRE2_LIBRARY})
 TARGET_COMPILE_DEFINITIONS(${STATIC_TARGET_NAME} PRIVATE -DPCRE2_STATIC)
+
+# CURL - Include headers for static library build (needed by templates.cpp)
+IF(CURL_LIBRARIES)
+    TARGET_INCLUDE_DIRECTORIES(${STATIC_TARGET_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
+    TARGET_LINK_LIBRARIES(${STATIC_TARGET_NAME} PRIVATE ${CURL_LIBRARIES})
+    TARGET_COMPILE_DEFINITIONS(${STATIC_TARGET_NAME} PRIVATE -DCURL_STATICLIB)
+ENDIF()
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(${STATIC_TARGET_NAME} PRIVATE ws2_32)
