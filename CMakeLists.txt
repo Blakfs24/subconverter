@@ -40,8 +40,13 @@ ENDIF()
 OPTION(USING_MALLOC_TRIM "Call malloc_trim after processing request to lower memory usage (Your system must support malloc_trim)." OFF)
 #now using internal MD5 calculation
 #OPTION(USING_MBEDTLS "Use mbedTLS instead of OpenSSL for MD5 calculation." OFF)
-OPTION(BUILD_RELEASE_APP "Build full subconverter executable" ON)
-OPTION(BUILD_STATIC_LIBRARY "Build a static library containing only the essential part." OFF)
+OPTION(BUILD_RELEASE_APP "Build full subconverter executable" OFF)
+OPTION(BUILD_STATIC_LIBRARY "Build a static library containing only the essential part." ON)
+OPTION(BUILD_WITH_PIC "Build with Position Independent Code (-fPIC)" OFF)
+
+IF(BUILD_WITH_PIC)
+    SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ENDIF()
 
 INCLUDE(CheckCXXSourceCompiles)
 CHECK_CXX_SOURCE_COMPILES(
@@ -521,6 +526,12 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
             ENDIF()
         ENDIF()
 
+        # Add Curl if available
+        IF(CURL_LIBRARY)
+             LIST(APPEND BUNDLE_DEPS ${CURL_LIBRARY})
+             MESSAGE(STATUS "   ✅ CURL will be included in full static library")
+        ENDIF()
+
         ADD_CUSTOM_TARGET(${FULL_STATIC_TARGET_NAME} ALL
             COMMAND ${CMAKE_COMMAND} -E echo "🔧 Creating full static library bundle..."
             COMMAND ${CMAKE_COMMAND} -E remove -f ${FULL_STATIC_LIB}
@@ -534,6 +545,9 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
 
             # Add yaml-cpp
             COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:yaml-cpp>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+
+            # Add Curl
+            COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<BOOL:${CURL_LIBRARY}>,$<TARGET_EXISTS:${CURL_LIBRARY}>>:ADDLIB $<TARGET_FILE:${CURL_LIBRARY}>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
 
             # Add PCRE2 if it's a real static library
             COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<TARGET_EXISTS:pcre2-8-static>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:pcre2-8-static,TYPE>,INTERFACE_LIBRARY>>>:ADDLIB $<TARGET_FILE:pcre2-8-static>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
@@ -561,6 +575,13 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
         # Determine dependencies to bundle
         SET(BUNDLE_DEPS ${STATIC_TARGET_NAME} yaml-cpp)
         SET(BUNDLE_LIBS $<TARGET_FILE:${STATIC_TARGET_NAME}> $<TARGET_FILE:yaml-cpp>)
+
+        # Add Curl if available
+        IF(CURL_LIBRARY)
+            LIST(APPEND BUNDLE_DEPS ${CURL_LIBRARY})
+            SET(BUNDLE_LIBS ${BUNDLE_LIBS} $<TARGET_FILE:${CURL_LIBRARY}>)
+            MESSAGE(STATUS "   ✅ CURL will be included in full static library")
+        ENDIF()
 
         # Check if PCRE2 is a real static library
         IF(TARGET pcre2-8-static)
@@ -591,6 +612,13 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
         SET(BUNDLE_DEPS ${STATIC_TARGET_NAME} yaml-cpp)
         SET(BUNDLE_LIBS $<TARGET_FILE:${STATIC_TARGET_NAME}> $<TARGET_FILE:yaml-cpp>)
 
+        # Add Curl if available
+        IF(CURL_LIBRARY)
+            LIST(APPEND BUNDLE_DEPS ${CURL_LIBRARY})
+            SET(BUNDLE_LIBS ${BUNDLE_LIBS} $<TARGET_FILE:${CURL_LIBRARY}>)
+            MESSAGE(STATUS "   ✅ CURL will be included in full static library")
+        ENDIF()
+
         # Check if PCRE2 is a real static library
         IF(TARGET pcre2-8-static)
             GET_TARGET_PROPERTY(PCRE2_TYPE pcre2-8-static TYPE)
@@ -619,6 +647,7 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
                 COMMAND ${CMAKE_COMMAND} -E echo "CREATE ${FULL_STATIC_LIB}" > ${CMAKE_BINARY_DIR}/bundle.mri
                 COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:${STATIC_TARGET_NAME}>" >> ${CMAKE_BINARY_DIR}/bundle.mri
                 COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:yaml-cpp>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<BOOL:${CURL_LIBRARY}>,$<TARGET_EXISTS:${CURL_LIBRARY}>>:ADDLIB $<TARGET_FILE:${CURL_LIBRARY}>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
                 COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<TARGET_EXISTS:pcre2-8-static>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:pcre2-8-static,TYPE>,INTERFACE_LIBRARY>>>:ADDLIB $<TARGET_FILE:pcre2-8-static>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
                 COMMAND ${CMAKE_COMMAND} -E echo "SAVE" >> ${CMAKE_BINARY_DIR}/bundle.mri
                 COMMAND ${CMAKE_COMMAND} -E echo "END" >> ${CMAKE_BINARY_DIR}/bundle.mri

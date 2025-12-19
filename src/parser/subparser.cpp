@@ -3017,7 +3017,7 @@ int explodeConfContent(const std::string &content, std::vector<Proxy> &nodes) {
 void explodeSingboxTransport(rapidjson::Value &singboxNode, std::string &net, std::string &host, std::string &path,
                              std::string edge) {
     if (singboxNode.HasMember("transport") && singboxNode["transport"].IsObject()) {
-        rapidjson::Value transport = singboxNode["transport"].GetObject();
+        auto transport = singboxNode["transport"].GetObject();
         net = GetMember(transport, "type");
         switch (hash_(net)) {
             case "http"_hash: {
@@ -3027,7 +3027,7 @@ void explodeSingboxTransport(rapidjson::Value &singboxNode, std::string &net, st
             case "ws"_hash: {
                 path = GetMember(transport, "path");
                 if (transport.HasMember("headers") && transport["headers"].IsObject()) {
-                    rapidjson::Value headers = transport["headers"].GetObject();
+                    auto headers = transport["headers"].GetObject();
                     host = GetMember(headers, "Host");
                     edge = GetMember(headers, "Edge");
                 }
@@ -3069,7 +3069,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
             std::string congestion_control, udp_relay_mode; //quic
             std::string underlying_proxy;
             tribool udp, tfo, scv, rrt, disableSni;
-            rapidjson::Value singboxNode = outbounds[i].GetObject();
+            auto singboxNode = outbounds[i].GetObject();
             if (singboxNode.HasMember("type") && singboxNode["type"].IsString()) {
                 Proxy node;
                 proxytype = singboxNode["type"].GetString();
@@ -3080,13 +3080,13 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                 tfo = GetMember(singboxNode, "tcp_fast_open");
                 std::vector<std::string> alpnList;
                 if (singboxNode.HasMember("tls") && singboxNode["tls"].IsObject()) {
-                    rapidjson::Value tlsObj = singboxNode["tls"].GetObject();
+                    auto tlsObj = singboxNode["tls"].GetObject();
                     if (tlsObj.HasMember("enabled") && tlsObj["enabled"].IsBool() && tlsObj["enabled"].GetBool()) {
                         tls = "tls";
                     }
                     sni = GetMember(tlsObj, "server_name");
                     if (tlsObj.HasMember("alpn") && tlsObj["alpn"].IsArray() && !tlsObj["alpn"].Empty()) {
-                        rapidjson::Value alpns = tlsObj["alpn"].GetArray();
+                        auto alpns = tlsObj["alpn"].GetArray();
                         if (alpns.Size() > 0) {
                             alpn = alpns[0].GetString();
                             for (auto &item: tlsObj["alpn"].GetArray()) {
@@ -3113,7 +3113,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                     }
                     if (tlsObj.HasMember("reality") && tlsObj["reality"].IsObject()) {
                         tls = "reality";
-                        rapidjson::Value reality = tlsObj["reality"].GetObject();
+                        auto reality = tlsObj["reality"].GetObject();
                         if (reality.HasMember("server_name") && reality["server_name"].IsString()) {
                             host = reality["server_name"].GetString();
                         }
@@ -3125,7 +3125,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                         }
                     }
                     if (tlsObj.HasMember("utls") && tlsObj["utls"].IsObject()) {
-                        if (rapidjson::Value reality = tlsObj["utls"].GetObject();
+                        if (auto reality = tlsObj["utls"].GetObject();
                             reality.HasMember("fingerprint") && reality["fingerprint"].IsString()) {
                             fingerprint = reality["fingerprint"].GetString();
                         }
@@ -3172,7 +3172,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                         encryption = GetMember(singboxNode, "encryption");
                         packet_encoding = GetMember(singboxNode, "packet_encoding");
                         if (singboxNode.HasMember("transport") && singboxNode["transport"].IsObject()) {
-                            rapidjson::Value transport = singboxNode["transport"].GetObject();
+                            auto transport = singboxNode["transport"].GetObject();
                             net = GetMember(transport, "type");
                             switch (hash_(net)) {
                                 case "tcp"_hash: {
@@ -3181,7 +3181,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                                 case "ws"_hash: {
                                     path = GetMember(transport, "path");
                                     if (transport.HasMember("headers") && transport["headers"].IsObject()) {
-                                        rapidjson::Value headers = transport["headers"].GetObject();
+                                        auto headers = transport["headers"].GetObject();
                                         host = GetMember(headers, "Host");
                                         edge = GetMember(headers, "Edge");
                                     }
@@ -3268,7 +3268,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                         up = GetMember(singboxNode, "up");
                         down = GetMember(singboxNode, "down");
                         if (singboxNode.HasMember("obfs") && singboxNode["obfs"].IsObject()) {
-                            rapidjson::Value obfsOpt = singboxNode["obfs"].GetObject();
+                            auto obfsOpt = singboxNode["obfs"].GetObject();
                             obfsParam = GetMember(obfsOpt, "type");
                             obfsPassword = GetMember(obfsOpt, "password");
                         }

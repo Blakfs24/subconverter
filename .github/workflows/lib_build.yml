@@ -1,0 +1,143 @@
+name: Build Static Library
+
+on:
+  push: 
+    branches: [ master ]
+    tags:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  linux_build:
+    name: Linux ${{ matrix.arch }} Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86
+            artifact_suffix: linux32
+            os: ubuntu-latest
+          - arch: amd64
+            artifact_suffix: linux64
+            os: ubuntu-latest
+          - arch: armv7
+            artifact_suffix: armv7
+            os: ubuntu-latest
+          - arch: aarch64
+            artifact_suffix: aarch64
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build in Alpine
+        run: |
+          docker run --rm -v $GITHUB_WORKSPACE:/root/workdir multiarch/alpine:${{ matrix.arch }}-latest-stable /bin/sh -c "
+            apk add bash git build-base cmake linux-headers perl &&
+            cd /root/workdir &&
+            cmake -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_STATIC_LIBRARY=ON \
+              -DBUILD_FULL_STATIC=ON \
+              -DFORCE_FETCH_DEPS=ON \
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+              -DAUTO_FETCH_DEPS=ON &&
+            cmake --build build --config Release --target subconverter_static_full --parallel \$(nproc)
+          "
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsubconverter_static_full_${{ matrix.artifact_suffix }}
+          path: build/libsubconverter_static_full.a
+
+  macos_build:
+    name: macOS ${{ matrix.arch }} Build
+    runs-on: macos-14
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            cmake_arch: x86_64
+            artifact_suffix: darwin_amd64
+          - arch: arm64
+            cmake_arch: arm64
+            artifact_suffix: darwin_arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
+            -DBUILD_STATIC_LIBRARY=ON \
+            -DBUILD_FULL_STATIC=ON \
+            -DFORCE_FETCH_DEPS=ON \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DAUTO_FETCH_DEPS=ON
+
+      - name: Build Static Library
+        run: |
+          cmake --build build --config Release --target subconverter_static_full --parallel $(sysctl -n hw.ncpu)
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsubconverter_static_full_${{ matrix.artifact_suffix }}
+          path: build/libsubconverter_static_full.a
+
+  windows_build:
+    name: Windows ${{ matrix.arch }} Build
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      matrix:
+        include:
+          - arch: x86
+            env: i686
+            msystem: MINGW32
+            artifact_suffix: win32
+          - arch: amd64
+            env: x86_64
+            msystem: MINGW64
+            artifact_suffix: win64
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: base-devel git mingw-w64-${{ matrix.env }}-gcc mingw-w64-${{ matrix.env }}-cmake mingw-w64-${{ matrix.env }}-pcre2 patch
+          msystem: ${{ matrix.msystem }}
+          path-type: inherit
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_STATIC_LIBRARY=ON \
+            -DBUILD_FULL_STATIC=ON \
+            -DFORCE_FETCH_DEPS=ON \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DAUTO_FETCH_DEPS=ON
+
+      - name: Build Static Library
+        run: |
+          cmake --build build --config Release --target subconverter_static_full --parallel $(nproc)
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsubconverter_static_full_${{ matrix.artifact_suffix }}.lib
+          path: build/subconverter_static_full.lib
