@@ -20,8 +20,14 @@ OPTION(AUTO_FETCH_DEPS "Automatically download missing dependencies using FetchC
 OPTION(FORCE_FETCH_DEPS "Force download all dependencies even if found on system" OFF)
 
 
+# Allow multiple definition for MinGW, but not for Zig (which doesn't support this flag)
 if (MINGW)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+    # Check if we're actually using Zig (which identifies as Clang but doesn't support this flag)
+    string(FIND "${CMAKE_C_COMPILER}" "zig" ZIG_C_FOUND)
+    string(FIND "${CMAKE_CXX_COMPILER}" "zig" ZIG_CXX_FOUND)
+    if (ZIG_C_FOUND EQUAL -1 AND ZIG_CXX_FOUND EQUAL -1)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+    endif()
 endif()
 
 IF(NOT CMAKE_BUILD_TYPE)
@@ -604,7 +610,7 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
             COMMENT "📦 Bundling ${STATIC_TARGET_NAME} with all dependencies"
         )
 
-    ELSEIF(MSVC OR MINGW)
+    ELSEIF(WIN32)
         # Windows: Use lib.exe or ar
         SET(FULL_STATIC_LIB ${CMAKE_BINARY_DIR}/${FULL_STATIC_TARGET_NAME}.lib)
 
@@ -641,22 +647,51 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
                 COMMENT "📦 Bundling ${STATIC_TARGET_NAME} with all dependencies"
             )
         ELSE()
-            # MinGW uses ar
-            ADD_CUSTOM_TARGET(${FULL_STATIC_TARGET_NAME} ALL
-                COMMAND ${CMAKE_COMMAND} -E echo "🔧 Creating full static library for Windows (MinGW)..."
-                COMMAND ${CMAKE_COMMAND} -E echo "CREATE ${FULL_STATIC_LIB}" > ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:${STATIC_TARGET_NAME}>" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:yaml-cpp>" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<BOOL:${CURL_LIBRARY}>,$<TARGET_EXISTS:${CURL_LIBRARY}>>:ADDLIB $<TARGET_FILE:${CURL_LIBRARY}>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<TARGET_EXISTS:pcre2-8-static>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:pcre2-8-static,TYPE>,INTERFACE_LIBRARY>>>:ADDLIB $<TARGET_FILE:pcre2-8-static>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "SAVE" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "END" >> ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ar -M < ${CMAKE_BINARY_DIR}/bundle.mri
-                COMMAND ${CMAKE_COMMAND} -E echo "✅ Full static library created: ${FULL_STATIC_LIB}"
-                DEPENDS ${BUNDLE_DEPS}
-                BYPRODUCTS ${FULL_STATIC_LIB}
-                COMMENT "📦 Bundling ${STATIC_TARGET_NAME} with all dependencies"
-            )
+            # MinGW/Zig uses ar
+            # Check if using Zig (LLVM ar doesn't support -M MRI scripts)
+            SET(USING_ZIG_AR FALSE)
+            IF(CMAKE_AR MATCHES "zig")
+                SET(USING_ZIG_AR TRUE)
+            ENDIF()
+
+            IF(USING_ZIG_AR)
+                # Zig/LLVM ar: use rcsL to add archive contents directly
+                # Note: CMAKE_AR is the wrapper script which already includes 'zig ar'
+                ADD_CUSTOM_TARGET(${FULL_STATIC_TARGET_NAME} ALL
+                    COMMAND ${CMAKE_COMMAND} -E echo "🔧 Creating full static library for Windows (Zig)..."
+                    COMMAND ${CMAKE_AR} qcsL ${FULL_STATIC_LIB}
+                        $<TARGET_FILE:${STATIC_TARGET_NAME}>
+                        $<TARGET_FILE:yaml-cpp>
+                        $<$<AND:$<BOOL:${CURL_LIBRARY}>,$<TARGET_EXISTS:${CURL_LIBRARY}>>:$<TARGET_FILE:${CURL_LIBRARY}>>
+                        $<$<AND:$<TARGET_EXISTS:pcre2-8-static>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:pcre2-8-static,TYPE>,INTERFACE_LIBRARY>>>:$<TARGET_FILE:pcre2-8-static>>
+                    COMMAND ${CMAKE_COMMAND} -E echo "✅ Full static library created: ${FULL_STATIC_LIB}"
+                    DEPENDS ${BUNDLE_DEPS}
+                    BYPRODUCTS ${FULL_STATIC_LIB}
+                    COMMENT "📦 Bundling ${STATIC_TARGET_NAME} with all dependencies"
+                )
+            ELSE()
+                # GNU ar: use MRI script
+                SET(AR_COMMAND ar)
+                IF(CMAKE_AR)
+                    SET(AR_COMMAND ${CMAKE_AR})
+                ENDIF()
+
+                ADD_CUSTOM_TARGET(${FULL_STATIC_TARGET_NAME} ALL
+                    COMMAND ${CMAKE_COMMAND} -E echo "🔧 Creating full static library for Windows (MinGW)..."
+                    COMMAND ${CMAKE_COMMAND} -E echo "CREATE ${FULL_STATIC_LIB}" > ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:${STATIC_TARGET_NAME}>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "ADDLIB $<TARGET_FILE:yaml-cpp>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<BOOL:${CURL_LIBRARY}>,$<TARGET_EXISTS:${CURL_LIBRARY}>>:ADDLIB $<TARGET_FILE:${CURL_LIBRARY}>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "$<$<AND:$<TARGET_EXISTS:pcre2-8-static>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:pcre2-8-static,TYPE>,INTERFACE_LIBRARY>>>:ADDLIB $<TARGET_FILE:pcre2-8-static>>" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "SAVE" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "END" >> ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${AR_COMMAND} -M < ${CMAKE_BINARY_DIR}/bundle.mri
+                    COMMAND ${CMAKE_COMMAND} -E echo "✅ Full static library created: ${FULL_STATIC_LIB}"
+                    DEPENDS ${BUNDLE_DEPS}
+                    BYPRODUCTS ${FULL_STATIC_LIB}
+                    COMMENT "📦 Bundling ${STATIC_TARGET_NAME} with all dependencies"
+                )
+            ENDIF()
         ENDIF()
     ENDIF()
 

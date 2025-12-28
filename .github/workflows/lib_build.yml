@@ -97,44 +97,76 @@ jobs:
   windows_build:
     name: Windows ${{ matrix.arch }} Build
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
     strategy:
       matrix:
         include:
           - arch: x86
-            env: i686
-            msystem: MINGW32
+            zig_target: x86-windows-gnu
             artifact_suffix: win32
           - arch: amd64
-            env: x86_64
-            msystem: MINGW64
+            zig_target: x86_64-windows-gnu
             artifact_suffix: win64
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
         with:
-          update: true
-          install: base-devel git mingw-w64-${{ matrix.env }}-gcc mingw-w64-${{ matrix.env }}-cmake mingw-w64-${{ matrix.env }}-pcre2 patch
-          msystem: ${{ matrix.msystem }}
-          path-type: inherit
+          version: 0.15.2
+
+      - name: Install pkg-config
+        shell: pwsh
+        run: |
+          choco install pkgconfiglite -y
+
+      - name: Create Zig wrapper scripts
+        shell: pwsh
+        run: |
+          # Create zig-cc.bat wrapper with size optimization
+          @"
+          @echo off
+          zig cc -target ${{ matrix.zig_target }} -Os -DNDEBUG -fno-unwind-tables -fno-asynchronous-unwind-tables %*
+          "@ | Out-File -FilePath zig-cc.bat -Encoding ascii
+          
+          # Create zig-cxx.bat wrapper with size optimization
+          @"
+          @echo off
+          zig c++ -target ${{ matrix.zig_target }} -Os -DNDEBUG -fno-unwind-tables -fno-asynchronous-unwind-tables %*
+          "@ | Out-File -FilePath zig-cxx.bat -Encoding ascii
+          
+          # Create zig-ar.bat wrapper
+          @"
+          @echo off
+          zig ar %*
+          "@ | Out-File -FilePath zig-ar.bat -Encoding ascii
+          
+          # Create zig-ranlib.bat wrapper (no-op for zig)
+          @"
+          @echo off
+          rem zig ar creates indexes automatically, ranlib is a no-op
+          "@ | Out-File -FilePath zig-ranlib.bat -Encoding ascii
 
       - name: Configure CMake
+        shell: pwsh
         run: |
-          cmake -B build -G "Unix Makefiles" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_STATIC_LIBRARY=ON \
-            -DBUILD_FULL_STATIC=ON \
-            -DFORCE_FETCH_DEPS=ON \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+          cmake -B build -G "Ninja" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER="${{ github.workspace }}/zig-cc.bat" `
+            -DCMAKE_CXX_COMPILER="${{ github.workspace }}/zig-cxx.bat" `
+            -DCMAKE_AR="${{ github.workspace }}/zig-ar.bat" `
+            -DCMAKE_RANLIB="${{ github.workspace }}/zig-ranlib.bat" `
+            -DCMAKE_EXE_LINKER_FLAGS="" `
+            -DCMAKE_SHARED_LINKER_FLAGS="" `
+            -DBUILD_STATIC_LIBRARY=ON `
+            -DBUILD_FULL_STATIC=ON `
+            -DFORCE_FETCH_DEPS=ON `
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 `
             -DAUTO_FETCH_DEPS=ON
 
       - name: Build Static Library
+        shell: pwsh
         run: |
-          cmake --build build --config Release --target subconverter_static_full --parallel $(nproc)
+          cmake --build build --config Release --target subconverter_static_full --parallel $env:NUMBER_OF_PROCESSORS
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
