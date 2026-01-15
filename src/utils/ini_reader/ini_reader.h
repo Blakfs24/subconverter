@@ -703,7 +703,7 @@ public:
         unsigned int index, UBound = sizeof(Array[0]) / sizeof(Array);
         string_array vArray = split(get(section, itemName), separator);
         for(index = 0; index < vArray.size() && index < UBound; index++)
-            Array[index] = stoi(vArray[index]);
+            Array[index] = to_int(vArray[index]);
         for(; index < UBound; index++)
             Array[index] = 0;
     }

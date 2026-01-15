@@ -2729,37 +2729,45 @@ proxyToSingBox(std::vector<Proxy> &nodes, rapidjson::Document &json,
             case ProxyType::HTTP:
             case ProxyType::HTTPS: {
                 addSingBoxCommonMembers(proxy, x, "http", allocator);
-                proxy.AddMember("username", rapidjson::StringRef(x.Username.c_str()), allocator);
-                proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+                if (!x.Username.empty()) {
+                    proxy.AddMember("username", rapidjson::StringRef(x.Username.c_str()), allocator);
+                }
+                if (!x.Password.empty()) {
+                    proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+                }
                 break;
             }
             case ProxyType::SOCKS5: {
                 addSingBoxCommonMembers(proxy, x, "socks", allocator);
                 proxy.AddMember("version", "5", allocator);
-                proxy.AddMember("username", rapidjson::StringRef(x.Username.c_str()), allocator);
-                proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+                if (!x.Username.empty()) {
+                    proxy.AddMember("username", rapidjson::StringRef(x.Username.c_str()), allocator);
+                }
+                if (!x.Password.empty()) {
+                    proxy.AddMember("password", rapidjson::StringRef(x.Password.c_str()), allocator);
+                }
                 break;
             }
             case ProxyType::Hysteria: {
                 addSingBoxCommonMembers(proxy, x, "hysteria", allocator);
                 proxy.AddMember("auth_str", rapidjson::StringRef(x.Auth.c_str()), allocator);
                 if (isNumeric(x.UpMbps)) {
-                    proxy.AddMember("up_mbps", std::stoi(x.UpMbps), allocator);
+                    proxy.AddMember("up_mbps", to_int(x.UpMbps), allocator);
                 } else {
                     size_t pos = x.UpMbps.find(search);
                     if (pos != std::string::npos) {
                         x.UpMbps.replace(pos, search.length(), "");
                     }
-                    proxy.AddMember("up_mbps", std::stoi(x.UpMbps), allocator);
+                    proxy.AddMember("up_mbps", to_int(x.UpMbps), allocator);
                 }
                 if (isNumeric(x.DownMbps)) {
-                    proxy.AddMember("down_mbps", std::stoi(x.DownMbps), allocator);
+                    proxy.AddMember("down_mbps", to_int(x.DownMbps), allocator);
                 } else {
                     size_t pos = x.DownMbps.find(search);
                     if (pos != std::string::npos) {
                         x.DownMbps.replace(pos, search.length(), "");
                     }
-                    proxy.AddMember("down_mbps", std::stoi(x.DownMbps), allocator);
+                    proxy.AddMember("down_mbps", to_int(x.DownMbps), allocator);
                 }
                 if (!x.TLSSecure) {
                     rapidjson::Value tls(rapidjson::kObjectType);
@@ -2805,7 +2813,7 @@ proxyToSingBox(std::vector<Proxy> &nodes, rapidjson::Document &json,
                             x.UpMbps.replace(pos, search.length(), "");
                         }
                     }
-                    proxy.AddMember("up_mbps", std::stoi(x.UpMbps), allocator);
+                    proxy.AddMember("up_mbps", to_int(x.UpMbps), allocator);
                 }
                 if (!x.DownMbps.empty()) {
                     if (!isNumeric(x.DownMbps)) {
@@ -2814,7 +2822,7 @@ proxyToSingBox(std::vector<Proxy> &nodes, rapidjson::Document &json,
                             x.DownMbps.replace(pos, search.length(), "");
                         }
                     }
-                    proxy.AddMember("down_mbps", std::stoi(x.DownMbps), allocator);
+                    proxy.AddMember("down_mbps", to_int(x.DownMbps), allocator);
                 }
                 if (!x.OBFSParam.empty()) {
                     rapidjson::Value obfs(rapidjson::kObjectType);

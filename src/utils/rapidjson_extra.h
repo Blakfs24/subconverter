@@ -2,6 +2,7 @@
 #define RAPIDJSON_EXTRA_H_INCLUDED
 
 #include <stdexcept>
+#include "string.h"
 
 template <typename T> void exception_thrower(T e, const std::string &cond, const std::string &file, int line)
 {
@@ -42,7 +43,7 @@ inline void operator >> (const rapidjson::Value &value, int &i)
     else if(value.IsInt())
         i = value.GetInt();
     else if(value.IsString())
-        i = std::stoi(value.GetString());
+        i = to_int(value.GetString());
     else if(value.IsBool())
         i = value.GetBool() ? 1 : 0;
     else
