@@ -101,6 +101,7 @@ IF(FORCE_FETCH_DEPS OR (AUTO_FETCH_DEPS AND NOT TOML11_INCLUDE_DIRS))
         GIT_TAG        v4.3.0
         GIT_SHALLOW    TRUE
         GIT_PROGRESS   TRUE
+        GIT_SUBMODULES ""
     )
 
     # Only download, don't configure/build (header-only library)
@@ -119,7 +120,7 @@ ENDIF()
 IF(NOT FORCE_FETCH_DEPS)
     FIND_PACKAGE(PkgConfig QUIET)
     IF(PKG_CONFIG_FOUND)
-        PKG_CHECK_MODULES(YAML_CPP yaml-cpp QUIET)
+        PKG_CHECK_MODULES(YAML_CPP QUIET IMPORTED_TARGET yaml-cpp)
     ENDIF()
 ENDIF()
 
@@ -145,7 +146,7 @@ IF(FORCE_FETCH_DEPS OR (AUTO_FETCH_DEPS AND NOT YAML_CPP_FOUND))
     SET(YAML_CPP_LIBRARIES yaml-cpp)
 ELSE()
     MESSAGE(STATUS "✅ Using system yaml-cpp")
-    SET(YAML_CPP_LIBRARIES yaml-cpp)
+    SET(YAML_CPP_LIBRARIES PkgConfig::YAML_CPP)
 ENDIF()
 
 # ------------------------------------------------------------
@@ -154,7 +155,7 @@ ENDIF()
 IF(NOT FORCE_FETCH_DEPS)
     FIND_PACKAGE(PkgConfig QUIET)
     IF(PKG_CONFIG_FOUND)
-        PKG_CHECK_MODULES(PCRE2 libpcre2-8 QUIET)
+        PKG_CHECK_MODULES(PCRE2 QUIET IMPORTED_TARGET libpcre2-8)
     ENDIF()
 ENDIF()
 
@@ -185,8 +186,7 @@ ELSE()
     # Create interface library for system PCRE2
     IF(NOT TARGET pcre2-8-static)
         ADD_LIBRARY(pcre2-8-static INTERFACE)
-        TARGET_INCLUDE_DIRECTORIES(pcre2-8-static INTERFACE ${PCRE2_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(pcre2-8-static INTERFACE ${PCRE2_LIBRARIES})
+        TARGET_LINK_LIBRARIES(pcre2-8-static INTERFACE PkgConfig::PCRE2)
     ENDIF()
     SET(PCRE2_LIBRARY pcre2-8-static)
 ENDIF()
@@ -477,8 +477,6 @@ TARGET_INCLUDE_DIRECTORIES(${STATIC_TARGET_NAME} PRIVATE ${RAPIDJSON_INCLUDE_DIR
 # toml11 - Already handled by FetchContent above
 TARGET_INCLUDE_DIRECTORIES(${STATIC_TARGET_NAME} PRIVATE ${TOML11_INCLUDE_DIRS})
 
-FIND_PACKAGE(PkgConfig REQUIRED)
-
 # yaml-cpp - Already handled by FetchContent above
 TARGET_LINK_LIBRARIES(${STATIC_TARGET_NAME} PRIVATE ${YAML_CPP_LIBRARIES})
 TARGET_COMPILE_DEFINITIONS(${STATIC_TARGET_NAME} PRIVATE -DYAML_CPP_STATIC_DEFINE)
@@ -563,7 +561,7 @@ IF(BUILD_STATIC_LIBRARY AND BUILD_FULL_STATIC)
             COMMAND ${CMAKE_COMMAND} -E echo "END" >> ${CMAKE_BINARY_DIR}/bundle.mri
 
             # Execute ar with MRI script
-            COMMAND ar -M < ${CMAKE_BINARY_DIR}/bundle.mri
+            COMMAND ${CMAKE_AR} -M < ${CMAKE_BINARY_DIR}/bundle.mri
 
             # Verify the library
             COMMAND ${CMAKE_COMMAND} -E echo "✅ Full static library created successfully!"

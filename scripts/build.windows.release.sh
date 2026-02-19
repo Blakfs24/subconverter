@@ -54,7 +54,8 @@ python -m pip install gitpython
 python scripts/update_rules.py -c scripts/rules_config.conf
 
 rm -f C:/Strawberry/perl/bin/pkg-config C:/Strawberry/perl/bin/pkg-config.bat
-cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" .
+cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" \
+      -DBUILD_RELEASE_APP=ON -DBUILD_STATIC_LIBRARY=OFF -DBUILD_FULL_STATIC=OFF .
 make -j4
 rm subconverter.exe
 # shellcheck disable=SC2046

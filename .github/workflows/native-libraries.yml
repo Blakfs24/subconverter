@@ -1,0 +1,146 @@
+name: Publish native SDKs
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'scripts/*native*'
+      - 'tests/**'
+      - '.github/workflows/native-libraries.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-sdk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SDK_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('ci-{0}', github.sha) }}
+
+jobs:
+  test:
+    name: SDK packaging contracts
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tests -p '*_test.py'
+
+  build:
+    name: SDK ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: test
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: android-arm
+            os: ubuntu-22.04
+          - target: android-arm64
+            os: ubuntu-22.04
+          - target: android-amd64
+            os: ubuntu-22.04
+          - target: linux-amd64-glibc
+            os: ubuntu-22.04
+          - target: macos-amd64
+            os: macos-15-intel
+          - target: macos-arm64
+            os: macos-15
+          - target: windows-amd64
+            os: windows-2022
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux build tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake ninja-build git pkg-config perl
+      - name: Install macOS build tools
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja
+      - name: Install Windows build tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install -y --no-progress mingw cmake ninja pkgconfiglite
+      - name: Setup Java
+        if: startsWith(matrix.target, 'android-')
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        if: startsWith(matrix.target, 'android-')
+        uses: android-actions/setup-android@v3
+        with:
+          # The action's default includes the unavailable legacy "tools" package.
+          packages: platform-tools
+      - name: Install fixed Android NDK
+        if: startsWith(matrix.target, 'android-')
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open("scripts/native-targets.json"))["ndk_version"])')"
+          sdkmanager "ndk;$version"
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/$version" >> "$GITHUB_ENV"
+      - name: Build static SDK
+        run: python3 scripts/build-native.py --target '${{ matrix.target }}'
+      - name: Package static SDK
+        run: python3 scripts/package-native.py package --target '${{ matrix.target }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  assemble:
+    name: Assemble versioned SDK index
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sdk-*
+          path: dist
+          merge-multiple: true
+      - run: python3 scripts/package-native.py index
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subconverter-sdk-release
+          path: |
+            dist/subconverter-*.tar.gz
+            dist/subconverter-index.json
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    name: Publish tagged SDK release
+    needs: assemble
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: subconverter-sdk-release
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/subconverter-*.tar.gz
+            dist/subconverter-index.json
+            dist/SHA256SUMS

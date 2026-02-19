@@ -3106,7 +3106,7 @@ void explodeSingbox(rapidjson::Value &outbounds, std::vector<Proxy> &nodes) {
                     }
                     if (tlsObj.HasMember("certificate_public_key_sha256") &&
                         tlsObj["certificate_public_key_sha256"].IsArray() && !tlsObj["certificate_public_key_sha256"].Empty()) {
-                        rapidjson::Value certFpArr = tlsObj["certificate_public_key_sha256"].GetArray();
+                        auto certFpArr = tlsObj["certificate_public_key_sha256"].GetArray();
                         if (certFpArr[0].IsString()) {
                             fingerprint = certFpArr[0].GetString();
                         }

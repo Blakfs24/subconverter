@@ -1,10 +1,11 @@
 name: Build Static Library
 
 on:
-  push: 
+  push:
     branches: [ master ]
     tags:
       - '**'
+      - '!v*'
   workflow_dispatch:
 
 concurrency:
@@ -16,6 +17,7 @@ jobs:
     name: Linux ${{ matrix.arch }} Build
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: x86
@@ -32,38 +34,79 @@ jobs:
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm,arm64
+
       - name: Build in Alpine
         run: |
-          docker run --rm -v $GITHUB_WORKSPACE:/root/workdir multiarch/alpine:${{ matrix.arch }}-latest-stable /bin/sh -c "
-            apk add bash git build-base cmake linux-headers perl &&
+          docker run --rm -v "$GITHUB_WORKSPACE:/root/workdir" multiarch/alpine:${{ matrix.arch }}-latest-stable /bin/sh -c '
+            apk add --no-cache bash git build-base cmake linux-headers perl pkgconf &&
             cd /root/workdir &&
             cmake -B build \
               -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_STATIC_LIBRARY=ON \
+              -DBUILD_WITH_PIC=ON \
               -DBUILD_FULL_STATIC=ON \
               -DFORCE_FETCH_DEPS=ON \
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.15 \
               -DAUTO_FETCH_DEPS=ON &&
-            cmake --build build --config Release --target subconverter_static_full --parallel \$(nproc)
-          "
+            cmake --build build --config Release --target subconverter_static_full --parallel $(nproc)
+          '
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: libsubconverter_static_full_${{ matrix.artifact_suffix }}
           path: build/libsubconverter_static_full.a
+          if-no-files-found: error
+
+  linux_glibc_build:
+    name: Linux amd64 glibc Build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake ninja-build git pkg-config perl
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_RELEASE_APP=OFF \
+            -DBUILD_STATIC_LIBRARY=ON \
+            -DBUILD_WITH_PIC=ON \
+            -DBUILD_FULL_STATIC=ON \
+            -DFORCE_FETCH_DEPS=ON \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.15 \
+            -DAUTO_FETCH_DEPS=ON
+
+      - name: Build Static Library
+        run: cmake --build build --config Release --target subconverter_static_full --parallel $(nproc)
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsubconverter_static_full_linux64_glibc
+          path: build/libsubconverter_static_full.a
+          if-no-files-found: error
 
   macos_build:
     name: macOS ${{ matrix.arch }} Build
-    runs-on: macos-14
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
+            os: macos-15-intel
             cmake_arch: x86_64
             artifact_suffix: darwin_amd64
           - arch: arm64
+            os: macos-15
             cmake_arch: arm64
             artifact_suffix: darwin_arm64
     steps:
@@ -79,9 +122,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
             -DBUILD_STATIC_LIBRARY=ON \
+            -DBUILD_WITH_PIC=ON \
             -DBUILD_FULL_STATIC=ON \
             -DFORCE_FETCH_DEPS=ON \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.15 \
             -DAUTO_FETCH_DEPS=ON
 
       - name: Build Static Library
@@ -93,11 +137,13 @@ jobs:
         with:
           name: libsubconverter_static_full_${{ matrix.artifact_suffix }}
           path: build/libsubconverter_static_full.a
+          if-no-files-found: error
 
   windows_build:
     name: Windows ${{ matrix.arch }} Build
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: x86
@@ -149,19 +195,23 @@ jobs:
       - name: Configure CMake
         shell: pwsh
         run: |
-          cmake -B build -G "Ninja" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_C_COMPILER="${{ github.workspace }}/zig-cc.bat" `
-            -DCMAKE_CXX_COMPILER="${{ github.workspace }}/zig-cxx.bat" `
-            -DCMAKE_AR="${{ github.workspace }}/zig-ar.bat" `
-            -DCMAKE_RANLIB="${{ github.workspace }}/zig-ranlib.bat" `
-            -DCMAKE_EXE_LINKER_FLAGS="" `
-            -DCMAKE_SHARED_LINKER_FLAGS="" `
-            -DBUILD_STATIC_LIBRARY=ON `
-            -DBUILD_FULL_STATIC=ON `
-            -DFORCE_FETCH_DEPS=ON `
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 `
-            -DAUTO_FETCH_DEPS=ON
+          $cmakeArgs = @(
+            '-B', 'build', '-G', 'Ninja',
+            '-DCMAKE_BUILD_TYPE=Release',
+            "-DCMAKE_C_COMPILER=${{ github.workspace }}/zig-cc.bat",
+            "-DCMAKE_CXX_COMPILER=${{ github.workspace }}/zig-cxx.bat",
+            "-DCMAKE_AR=${{ github.workspace }}/zig-ar.bat",
+            "-DCMAKE_RANLIB=${{ github.workspace }}/zig-ranlib.bat",
+            '-DCMAKE_EXE_LINKER_FLAGS=',
+            '-DCMAKE_SHARED_LINKER_FLAGS=',
+            '-DBUILD_STATIC_LIBRARY=ON',
+            '-DBUILD_WITH_PIC=ON',
+            '-DBUILD_FULL_STATIC=ON',
+            '-DFORCE_FETCH_DEPS=ON',
+            '-DCMAKE_POLICY_VERSION_MINIMUM=3.15',
+            '-DAUTO_FETCH_DEPS=ON'
+          )
+          cmake @cmakeArgs
 
       - name: Build Static Library
         shell: pwsh
@@ -173,3 +223,4 @@ jobs:
         with:
           name: libsubconverter_static_full_${{ matrix.artifact_suffix }}.lib
           path: build/subconverter_static_full.lib
+          if-no-files-found: error

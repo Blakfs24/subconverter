@@ -43,7 +43,8 @@ make install -j4
 cd ..
 
 export PKG_CONFIG_PATH=/usr/lib64/pkgconfig
-cmake -DCMAKE_BUILD_TYPE=Release .
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_RELEASE_APP=ON -DBUILD_STATIC_LIBRARY=OFF -DBUILD_FULL_STATIC=OFF .
 make -j3
 rm subconverter
 # shellcheck disable=SC2046
