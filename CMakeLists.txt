@@ -101,6 +101,7 @@ IF(FORCE_FETCH_DEPS OR (AUTO_FETCH_DEPS AND NOT TOML11_INCLUDE_DIRS))
         GIT_TAG        v4.3.0
         GIT_SHALLOW    TRUE
         GIT_PROGRESS   TRUE
+        GIT_SUBMODULES ""
     )
 
     # Only download, don't configure/build (header-only library)
